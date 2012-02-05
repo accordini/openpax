@@ -1,0 +1,116 @@
+OpenPAX resource library v 0.0.1
+--------------------------------------------------------------------------
+
+Introduction
+------------------------
+This library provide an easy access to Pax Imperia: Eminent domani resource files. 
+Currently it can handle images, tech, strings and palettes. 
+I'm working on extending the support to ALL data files. 
+
+
+Compilation 
+------------------------
+The bare lib depends only on the standard C/C++ library. If you want to see some action, 
+the small program stored in main.cpp depends on SDL.
+Compilation is quite straightforward:
+
+	g++ -I./ main.cpp source/resource.cpp source/resource_image.cpp source/resource_string.cpp source/resource_tech.cpp source/resource_palette.cpp -I/usr/include/SDL -lSDL -o demo
+
+You'll need to change the hardcoded path in main.cpp source file. And to run, demo need two numerical
+parameters:
+	- first one is the index of the image inside the data file
+	- second one is the index of the palette used to render the image itself
+
+
+Usage
+------------------------
+Everything was stripped down the essential: You have only to create a Resource
+object. And the class know how to manage everything.
+For example, to open a image file:
+
+	Resource *imageFile = new Resource("./Tech.img");
+
+And then you can navigate through all images: 
+
+	ImageResourceObject *imageObject = (ImageResourceObject*)imageFile->getObjectByIndex(0);
+
+either by an incremental index or using the specific image ID:
+
+	ImageResourceObject *imageObject = (ImageResourceObject*)imageFile->getObject(0x123);
+
+Obviosly, that ID passed to getObject must be valid. 
+Same thing works for the other resource files. 
+
+
+
+Note for image data files
+------------------------
+There's one last important thing to note: every image has to be rendered using the right 
+palette. In other word: there are 16 palette stored in PalData and each image file uses a 
+different one. I made (by hand) a useful table:
+
+	Image file			Palette ID 
+	----------------------------------------------------------------
+	Advisors.img			0x3ed
+	Combat.img			0x3ed
+	Empire.img			0x3ed
+	Infra.img			Dont know.
+	Main.img			0x3eb
+	Planets.img			0x3ed
+	Ships.img			0x3f3
+	Surface.img			0x3ee
+	Tech.img			0x3e9
+	Universe.img			0x3ed
+
+So, if i'm interested in some image stored inside Ships.img, I'll load it and PalData too and 
+then I'll select the right palette (id is 0x3f3) and then, using this data, I'll remap 8bits colors.
+Here's a small example using SDL (I'm assuming that Ships.img and PalData are stored in the directory that
+contains our program):
+
+	// Load resources
+	Resource *shipsImages = new Resource("Ships.img");	
+	Resource *palettes = new Resource("PalData");
+
+	// Select the right palette ( 0x3f3 )
+	PaletteResourceObject *paletteObject = (PaletteResourceObject*)palettes->getObject( 0x3f3 );
+
+	// ... perform SDL initialization and stuff ...
+
+	// ... inside the rendering loop ...
+	ImageResourceObject *imageObject = (ImageResourceObject*)shipsImages->getObject(0);
+	uint8 *imageData = imageObject->pixels();
+	for (int i=0;i<imageObject->height();i++) {
+		for (int j=0;j<imageObject->width();j++) {
+			PaletteEntry *entry = paletteObject->getColorByIndex(*imageData++);
+			putpixel(screen, j, i, SDL_MapRGB(screen->format, entry->r, entry->g, entry->b));
+		}
+	}
+
+Here we are writing data directly to video memory, and SDL_MapRGB takes care of converting data from the 
+8bit colors to the 32bits counterparts, using the selected palette. 
+Obviusly, changing palette means changing how things looks like on video. So choose carefully.
+
+
+One last thing...
+------------------------
+I know that all of this looks like pretty raw and primitive. But I'm working on improving it :)
+And sorry for my poor english.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
